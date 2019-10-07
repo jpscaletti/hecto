@@ -51,10 +51,25 @@ function.
 
 #### hecto.copy()
 
-`hecto.copy(src_path, dst_path, data=None, *,
-    exclude=DEFAULT_FILTER, include=DEFAULT_INCLUDE, envops=None,
-    pretend=False, force=False, skip=False, quiet=False,
-)`
+```python
+hecto.copy(
+    src_path,
+    dst_path,
+
+    data=DEFAULT_DATA,
+    *,
+    exclude=DEFAULT_FILTER,
+    include=DEFAULT_INCLUDE,
+    skip_if_exists=[],
+    tasks=[],
+    envops={},
+
+    pretend=False,
+    force=False,
+    skip=False,
+    quiet=False,
+)
+```
 
 Uses the template in `src_path` to generate a new project at `dst_path`.
 
@@ -109,7 +124,6 @@ If a YAML file named `hecto.yml` is found in the root of the project, it will be
 Note that they become just _the defaults_, so any explicitly-passed argument will overwrite them.
 
 ```yaml
----
 # Shell-style patterns files/folders that must not be copied.
 exclude:
   - "*.bar"
