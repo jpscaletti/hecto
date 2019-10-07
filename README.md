@@ -1,10 +1,10 @@
-**NOTE: The scope of this project is complete. Please do not send feature requests.**
+**NOTE: The scope of this project is COMPLETE. Please do not send feature requests.**
 
 # ![Hecto(graph)](https://github.com/jpscaletti/hecto/raw/master/hecto.png)
 
 [![Coverage Status](https://coveralls.io/repos/github/jpscaletti/hecto/badge.svg?branch=master)](https://coveralls.io/github/jpscaletti/hecto?branch=master) [![Tests](https://travis-ci.org/jpscaletti/hecto.svg?branch=master)](https://travis-ci.org/jpscaletti/hecto/) [![](https://img.shields.io/pypi/pyversions/hecto.svg)](https://pypi.python.org/pypi/hecto)
 
-A simple **library** for rendering projects templates.
+A small and simple **library** for rendering projects templates.
 
 * Works with **local** paths and **git URLs**.
 * Your project can include any file and **Hecto** can dynamically replace values in any kind of text files.
