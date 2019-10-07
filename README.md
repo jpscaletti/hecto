@@ -137,7 +137,3 @@ skip_if_exists:
   - ".gitignore"
 
 ```
-
----
-
-![Sample output](https://github.com/jpscaletti/hecto/raw/master/output.png)
