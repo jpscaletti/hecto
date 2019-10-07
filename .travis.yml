@@ -1,0 +1,17 @@
+---
+dist: bionic
+language: python
+python:
+  - '3.6'
+  - '3.7'
+  - '3.8-dev'
+  - 'nightly'
+
+matrix:
+  allow_failures:
+    - python: 'nightly'
+
+before_install: pip install -U pip coveralls
+install: pip install .[testing]
+script: pytest --cov hecto hecto tests
+after_success: coveralls
