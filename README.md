@@ -63,7 +63,6 @@ hecto.copy(
     exclude=DEFAULT_FILTER,
     include=DEFAULT_INCLUDE,
     skip_if_exists=[],
-    tasks=[],
     envops={},
 
     pretend=False,
@@ -97,11 +96,6 @@ Uses the template in `src_path` to generate a new project at `dst_path`.
 - **skip_if_exists** (list of str):<br>
     Optional. Skip any of these file names or shell-style patterns, without asking, if another with the same name already exists in the destination folder.
     It only makes sense if you are copying to a folder that already exists.
-
-- **tasks** (list of str):<br>
-    Optional lists of commands to run in order after finishing the copy.
-    Like in the templates files, you can use variables on the commands that will be replaced by the real values before running the command.
-    If one of the commands fail, the rest of them will not run.
 
 - **envops** (dict):<br>
     Optional. Extra options for the Jinja template environment.
@@ -140,16 +134,9 @@ include:
 # Shell-style patterns files to skip, without asking, if they already exists
 # in the destination folder
 skip_if_exists:
-
-# Commands to be executed after the copy
-tasks:
-  - "git init"
-  - "rm [[ name_of_the_project ]]/README.md"
+  - ".gitignore"
 
 ```
-
-**Warning:** Use only trusted project templates as these tasks run with the
-same level of access as your user.
 
 ---
 

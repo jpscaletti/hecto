@@ -25,8 +25,7 @@ from .tools import STYLE_WARNING
 __all__ = ("copy", "copy_local", "load_defaults")
 
 # Files of the template to exclude from the final project
-DEFAULT_EXCLUDE = (
-    "hecto.yml",
+DEFAULT_EXCLUDE = [
     "~*",
     "*.py[co]",
     "__pycache__",
@@ -35,7 +34,8 @@ DEFAULT_EXCLUDE = (
     ".git/*",
     ".DS_Store",
     ".svn",
-)
+    ".hg",
+]
 
 DEFAULT_INCLUDE = ()
 
@@ -50,7 +50,6 @@ def copy(
     exclude=None,
     include=None,
     skip_if_exists=None,
-    tasks=None,
     envops=None,
     pretend=False,
     force=False,
@@ -86,12 +85,6 @@ def copy(
         destination folder. (it only makes sense if you are copying to a folder that
         already exists).
 
-    - tasks (list):
-        Optional lists of commands to run in order after finishing the copy.
-        Like in the templates files, you can use variables on the commands that will
-        be replaced by the real values before running the command.
-        If one of the commands fail, the rest of them will not run.
-
     - envops (dict):
         Extra options for the Jinja template environment.
 
@@ -123,7 +116,6 @@ def copy(
             exclude=exclude,
             include=include,
             skip_if_exists=skip_if_exists,
-            tasks=tasks,
             envops=envops,
             pretend=pretend,
             force=force,
@@ -161,7 +153,6 @@ def copy_local(
     exclude=None,
     include=None,
     skip_if_exists=None,
-    tasks=None,
     extra_paths=None,
     envops=None,
     **flags
@@ -174,6 +165,7 @@ def copy_local(
     default_exclude = defaults.pop("exclude", None)
     if exclude is None:
         exclude = default_exclude or DEFAULT_EXCLUDE
+    exclude.append("hecto.yml")
 
     default_include = defaults.pop("include", None)
     if include is None:
@@ -182,10 +174,6 @@ def copy_local(
     default_skip_if_exists = defaults.pop("skip_if_exists", None)
     if skip_if_exists is None:
         skip_if_exists = default_skip_if_exists or []
-
-    default_tasks = defaults.pop("tasks", None)
-    if tasks is None:
-        tasks = default_tasks or []
 
     render = get_jinja_renderer(src_path, data, envops)
     skip_if_exists = [render.string(pattern) for pattern in skip_if_exists]
@@ -212,14 +200,6 @@ def copy_local(
 
         for source_path, rel_path in source_paths:
             render_file(dst_path, rel_path, source_path, render, must_skip, flags)
-
-    if not flags["quiet"]:
-        print("")  # padding space
-
-    if tasks:
-        run_tasks(dst_path, render, tasks, flags)
-        if not flags["quiet"]:
-            print("")  # padding space
 
 
 def load_defaults(src_path, **flags):
@@ -329,17 +309,3 @@ def overwrite_file(display_path, source_path, final_path, content, flags):
 
     msg = f" Overwrite {final_path}?"  # pragma: no cover
     return prompt_bool(msg, default=True)  # pragma: no cover
-
-
-def run_tasks(dst_path, render, tasks, flags):
-    dst_path = str(dst_path)
-    num_tasks = len(tasks)
-    for i, task in enumerate(tasks):
-        task = render.string(task)
-        printf(
-            f" > Running task {i + 1} of {num_tasks}",
-            task,
-            style=STYLE_OK,
-            quiet=flags["quiet"],
-        )
-        subprocess.run(task, shell=True, check=True, cwd=dst_path)

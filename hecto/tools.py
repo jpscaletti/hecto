@@ -166,8 +166,6 @@ def get_jinja_renderer(src_path, data=None, envops=None):
 
     # We want to minimize the risk of hidden malware in the templates
     # so we use the SandboxedEnvironment instead of the regular one.
-    # Of couse we still have the post-copy tasks to worry about, but at least
-    # they are more visible to the final user.
     env = SandboxedEnvironment(**_envops)
 
     return Renderer(env=env, src_path=src_path, data=data)
