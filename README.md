@@ -1,3 +1,4 @@
+**NOTE: The scope of this project is complete. Please do not send feature requests.**
 
 # ![Hecto(graph)](https://github.com/jpscaletti/hecto/raw/master/hecto.png)
 
@@ -8,6 +9,7 @@ A simple **library** for rendering projects templates.
 * Works with **local** paths and **git URLs**.
 * Your project can include any file and **Hecto** can dynamically replace values in any kind of text files.
 * It generates a beautiful output and take care of not overwrite existing files, unless instructed to do so.
+
 
 ## How to use
 

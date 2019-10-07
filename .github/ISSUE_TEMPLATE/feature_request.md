@@ -7,5 +7,5 @@ assignees: ''
 
 ---
 
-The scope of this project is completed.
+The scope of this project is complete.
 Do not send feature requests because they'll be denied.
