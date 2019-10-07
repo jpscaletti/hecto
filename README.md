@@ -3,7 +3,7 @@
 
 [![Coverage Status](https://coveralls.io/repos/github/jpscaletti/hecto/badge.svg?branch=master)](https://coveralls.io/github/jpscaletti/hecto?branch=master) [![Tests](https://travis-ci.org/jpscaletti/hecto.svg?branch=master)](https://travis-ci.org/jpscaletti/hecto/) [![](https://img.shields.io/pypi/pyversions/hecto.svg)](https://pypi.python.org/pypi/hecto)
 
-A library for rendering projects templates.
+A simple **library** for rendering projects templates.
 
 * Works with **local** paths and **git URLs**.
 * Your project can include any file and **Hecto** can dynamically replace values in any kind of text files.
@@ -47,9 +47,64 @@ in the templates. The arguments can be any valid Python value, even a
 function.
 
 
+## API
+
+#### hecto.copy()
+
+`hecto.copy(src_path, dst_path, data=None, *,
+    exclude=DEFAULT_FILTER, include=DEFAULT_INCLUDE, envops=None,
+    pretend=False, force=False, skip=False, quiet=False,
+)`
+
+Uses the template in `src_path` to generate a new project at `dst_path`.
+
+**Arguments**:
+
+- **src_path** (str):<br>
+    Absolute path to the project skeleton. May be a version control system URL.
+
+- **dst_path** (str):<br>
+    Absolute path to where to render the project template.
+
+- **data** (dict):<br>
+    Optional. Data to be passed to the templates.
+
+- **exclude** (list of str):<br>
+    Optional. A list of names or shell-style patterns matching files or folders
+    that must not be copied.
+
+- **include** (list of str):<br>
+    Optional. A list of names or shell-style patterns matching files or folders that must be included, even if its name is a match for the `exclude` list. Eg: `['.gitignore']`.
+    The default is an empty list.
+
+- **skip_if_exists** (list of str):<br>
+    Optional. Skip any of these file names or shell-style patterns, without asking, if another with the same name already exists in the destination folder.
+    It only makes sense if you are copying to a folder that already exists.
+
+- **tasks** (list of str):<br>
+    Optional lists of commands to run in order after finishing the copy.
+    Like in the templates files, you can use variables on the commands that will be replaced by the real values before running the command.
+    If one of the commands fail, the rest of them will not run.
+
+- **envops** (dict):<br>
+    Optional. Extra options for the Jinja template environment.
+
+- **pretend** (bool):<br>
+    Optional. Run but do not make any changes
+
+- **force** (bool):<br>
+    Optional. Overwrite files that already exist, without asking
+
+- **skip** (bool):<br>
+    Optional. Skip files that already exist, without asking
+
+- **quiet** (bool):<br>
+    Optional. Suppress the status output
+
+
 ## The hecto.yml file
 
-If a `hecto.yml` file is found in the root of the project, it will be read and used for arguments defaults.
+If a YAML file named `hecto.yml` is found in the root of the project, it will be read and used for arguments defaults.
 
 Note that they become just _the defaults_, so any explicitly-passed argument will overwrite them.
 
@@ -66,6 +121,10 @@ exclude:
 include:
   - "foo.bar"
 
+# Shell-style patterns files to skip, without asking, if they already exists
+# in the destination folder
+skip_if_exists:
+
 # Commands to be executed after the copy
 tasks:
   - "git init"
@@ -75,57 +134,6 @@ tasks:
 
 **Warning:** Use only trusted project templates as these tasks run with the
 same level of access as your user.
-
-
-## API
-
-#### hecto.copy()
-
-`hecto.copy(src_path, dst_path, data=None, *,
-    exclude=DEFAULT_FILTER, include=DEFAULT_INCLUDE, envops=None,
-    pretend=False, force=False, skip=False, quiet=False,
-)`
-
-Uses the template in src_path to generate a new project at dst_path.
-
-**Arguments**:
-
-- **src_path** (str):
-    Absolute path to the project skeleton. May be a version control system URL
-
-- **dst_path** (str):
-    Absolute path to where to render the skeleton
-
-- **data** (dict):
-    Optional. Data to be passed to the templates in addtion to the user data from a `hecto.yml`.
-
-- **exclude** (list of str):
-    Optional. A list of names or shell-style patterns matching files or folders
-    that mus not be copied.
-
-- **include** (list of str):
-    Optional. A list of names or shell-style patterns matching files or folders that must be included, even if its name are in the `exclude` list.
-    Eg: `['.gitignore']`. The default is an empty list.
-
-- **tasks** (list of str):
-    Optional lists of commands to run in order after finishing the copy.
-    Like in the templates files, you can use variables on the commands that will be replaced by the real values before running the command.
-    If one of the commands fail, the rest of them will not run.
-
-- **envops** (dict):
-    Optional. Extra options for the Jinja template environment.
-
-- **pretend** (bool):
-    Optional. Run but do not make any changes
-
-- **force** (bool):
-    Optional. Overwrite files that already exist, without asking
-
-- **skip** (bool):
-    Optional. Skip files that already exist, without asking
-
-- **quiet** (bool):
-    Optional. Suppress the status output
 
 ---
 

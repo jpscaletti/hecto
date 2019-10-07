@@ -11,7 +11,7 @@ import yaml
 from . import vcs
 from .tools import copy_file
 from .tools import get_jinja_renderer
-from .tools import get_name_filter
+from .tools import get_name_filters
 from .tools import make_folder
 from .tools import printf
 from .tools import printf_exception
@@ -49,6 +49,7 @@ def copy(
     *,
     exclude=None,
     include=None,
+    skip_if_exists=None,
     tasks=None,
     envops=None,
     pretend=False,
@@ -77,8 +78,13 @@ def copy(
 
     - include (list):
         A list of names or shell-style patterns matching files or folders that
-        must be included, even if its name are in the `exclude` list.
+        must be included, even if its name is a match for the `exclude` list.
         Eg: `['.gitignore']`. The default is an empty list.
+
+    - skip_if_exists (list):
+        Skip any of these files if another with the same name already exists in the
+        destination folder. (it only makes sense if you are copying to a folder that
+        already exists).
 
     - tasks (list):
         Optional lists of commands to run in order after finishing the copy.
@@ -116,6 +122,7 @@ def copy(
             data=_data,
             exclude=exclude,
             include=include,
+            skip_if_exists=skip_if_exists,
             tasks=tasks,
             envops=envops,
             pretend=pretend,
@@ -131,7 +138,7 @@ def copy(
 RE_TMPL = re.compile(r"\.tmpl$", re.IGNORECASE)
 
 
-def resolve_paths(src_path, dst_path):
+def resolve_source_path(src_path):
     try:
         src_path = Path(src_path).resolve()
     except FileNotFoundError:
@@ -143,7 +150,7 @@ def resolve_paths(src_path, dst_path):
     if not src_path.is_dir():
         raise ValueError("The project template must be a folder")
 
-    return src_path, Path(dst_path).resolve()
+    return src_path
 
 
 def copy_local(
@@ -153,12 +160,14 @@ def copy_local(
     *,
     exclude=None,
     include=None,
+    skip_if_exists=None,
     tasks=None,
     extra_paths=None,
     envops=None,
     **flags
 ):
-    src_path, dst_path = resolve_paths(src_path, dst_path)
+    src_path = resolve_source_path(src_path)
+    dst_path = Path(dst_path).resolve()
 
     defaults = load_defaults(src_path, **flags)
 
@@ -170,13 +179,18 @@ def copy_local(
     if include is None:
         include = default_include or DEFAULT_INCLUDE
 
+    default_skip_if_exists = defaults.pop("skip_if_exists", None)
+    if skip_if_exists is None:
+        skip_if_exists = default_skip_if_exists or []
+
     default_tasks = defaults.pop("tasks", None)
     if tasks is None:
         tasks = default_tasks or []
 
-    must_filter = get_name_filter(exclude, include)
-    data.setdefault("folder_name", dst_path.name)
     render = get_jinja_renderer(src_path, data, envops)
+    skip_if_exists = [render.string(pattern) for pattern in skip_if_exists]
+    must_filter, must_skip = get_name_filters(exclude, include, skip_if_exists)
+    data.setdefault("folder_name", dst_path.name)
 
     if not flags["quiet"]:
         print("")  # padding space
@@ -184,6 +198,7 @@ def copy_local(
     for folder, _, files in os.walk(str(src_path)):
         rel_folder = folder.replace(str(src_path), "", 1).lstrip(os.path.sep)
         rel_folder = render.string(rel_folder)
+        rel_folder = rel_folder.replace("." + os.path.sep, ".", 1)
 
         if must_filter(rel_folder):
             continue
@@ -191,22 +206,20 @@ def copy_local(
         folder = Path(folder)
         rel_folder = Path(rel_folder)
 
-        for src_name in files:
-            dst_name = re.sub(RE_TMPL, "", src_name)
-            dst_name = render.string(dst_name)
-            rel_path = rel_folder / dst_name
+        render_folder(dst_path, rel_folder, flags)
 
-            if must_filter(rel_path):
-                continue
+        source_paths = get_source_paths(folder, rel_folder, files, render, must_filter)
 
-            source_path = folder / src_name
-            render_file(dst_path, rel_path, source_path, render, **flags)
+        for source_path, rel_path in source_paths:
+            render_file(dst_path, rel_path, source_path, render, must_skip, flags)
 
     if not flags["quiet"]:
         print("")  # padding space
 
     if tasks:
-        run_tasks(dst_path, render, tasks)
+        run_tasks(dst_path, render, tasks, flags)
+        if not flags["quiet"]:
+            print("")  # padding space
 
 
 def load_defaults(src_path, **flags):
@@ -216,36 +229,72 @@ def load_defaults(src_path, **flags):
     try:
         return yaml.safe_load(defaults_path.read_text())
     except yaml.YAMLError:
-        if not flags.get("quiet"):
-            printf_exception("INVALID CONFIG FILE", msg=str(defaults_path))
+        printf_exception(
+            "INVALID CONFIG FILE",
+            msg=str(defaults_path),
+            quiet=flags.get("quiet")
+        )
         return {}
 
 
-def render_file(dst_path, rel_path, source_path, render, **flags):
+def get_source_paths(folder, rel_folder, files, render, must_filter):
+    source_paths = []
+    for src_name in files:
+        dst_name = re.sub(RE_TMPL, "", src_name)
+        dst_name = render.string(dst_name)
+        rel_path = rel_folder / dst_name
+
+        if must_filter(rel_path):
+            continue
+        source_paths.append((folder / src_name, rel_path))
+    return source_paths
+
+
+def render_folder(dst_path, rel_folder, flags):
+    final_path = dst_path / rel_folder
+    display_path = str(rel_folder) + os.path.sep
+
+    if str(rel_folder) == ".":
+        make_folder(final_path, pretend=flags["pretend"])
+        return
+
+    if final_path.exists():
+        printf("identical", display_path, style=STYLE_IGNORE, quiet=flags["quiet"])
+        return
+
+    make_folder(final_path, pretend=flags["pretend"])
+    printf("create", display_path, style=STYLE_OK, quiet=flags["quiet"])
+
+
+def render_file(dst_path, rel_path, source_path, render, must_skip, flags):
     """Process or copy a file of the skeleton.
     """
-    final_path = dst_path.resolve() / rel_path
-    if not flags["pretend"]:
-        make_folder(final_path.parent)
-
     if source_path.suffix == ".tmpl":
         content = render(source_path)
     else:
         content = None
 
-    display_path = str(rel_path).replace("." + os.path.sep, ".", 1)
+    display_path = str(rel_path)
+    final_path = dst_path / rel_path
 
-    if not final_path.exists():
-        if not flags["quiet"]:
-            printf("create", display_path, style=STYLE_OK)
-    else:
+    if final_path.exists():
         if file_is_identical(source_path, final_path, content):
-            if not flags["quiet"]:
-                printf("identical", display_path, style=STYLE_IGNORE)
+            printf("identical", display_path, style=STYLE_IGNORE, quiet=flags["quiet"])
             return
 
-        if not overwrite_file(display_path, source_path, final_path, content, **flags):
+        if must_skip(rel_path):
+            printf("skip", display_path, style=STYLE_WARNING, quiet=flags["quiet"])
             return
+
+        if overwrite_file(
+            display_path, source_path, final_path, content, flags
+        ):
+            printf("force", display_path, style=STYLE_WARNING, quiet=flags["quiet"])
+        else:
+            printf("skip", display_path, style=STYLE_WARNING, quiet=flags["quiet"])
+            return
+    else:
+        printf("create", display_path, style=STYLE_OK, quiet=flags["quiet"])
 
     if flags["pretend"]:
         return
@@ -271,25 +320,26 @@ def file_has_this_content(path, content):
     return content == path.read_text()
 
 
-def overwrite_file(display_path, source_path, final_path, content, **flags):
-    if not flags["quiet"]:
-        printf("conflict", display_path, style=STYLE_DANGER)
+def overwrite_file(display_path, source_path, final_path, content, flags):
+    printf("conflict", display_path, style=STYLE_DANGER, quiet=flags["quiet"])
     if flags["force"]:
-        overwrite = True
-    elif flags["skip"]:
-        overwrite = False
-    else:  # pragma: no cover
-        msg = " Overwrite {}?".format(final_path)
-        overwrite = prompt_bool(msg, default=True)
+        return True
+    if flags["skip"]:  # pragma: no cover
+        return False
 
-    if not flags["quiet"]:
-        printf("force" if overwrite else "skip", display_path, style=STYLE_WARNING)
-
-    return overwrite
+    msg = f" Overwrite {final_path}?"  # pragma: no cover
+    return prompt_bool(msg, default=True)  # pragma: no cover
 
 
-def run_tasks(dst_path, render, tasks):
+def run_tasks(dst_path, render, tasks, flags):
     dst_path = str(dst_path)
-    for task in tasks:
+    num_tasks = len(tasks)
+    for i, task in enumerate(tasks):
         task = render.string(task)
+        printf(
+            f" > Running task {i + 1} of {num_tasks}",
+            task,
+            style=STYLE_OK,
+            quiet=flags["quiet"],
+        )
         subprocess.run(task, shell=True, check=True, cwd=dst_path)

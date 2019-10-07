@@ -30,14 +30,17 @@ STYLE_IGNORE = [Fore.CYAN]
 STYLE_DANGER = [Fore.RED, Style.BRIGHT]
 
 
-def printf(action, msg, style, indent=10):
+def printf(action, msg, style, indent=10, quiet=False):
+    if quiet:
+        return
     action = action.rjust(indent, " ")
     out = style + [action, Fore.RESET, Style.RESET_ALL, "  ", msg]
     print(*out, sep="")
 
 
-def printf_exception(action, msg=""):
-    return printf(action, msg, style=STYLE_DANGER)
+def printf_exception(action, msg="", quiet=False):
+    if not quiet:
+        return printf(action, msg, style=STYLE_DANGER)
 
 
 no_value = object()
@@ -59,16 +62,19 @@ def prompt(question, default=no_value, default_show=None, validator=required, **
     printed and the user asked to supply another value.
     """
     if default_show:
-        question += " [{}] ".format(default_show)
-    elif default is not no_value:
-        question += " [{}] ".format(default)
+        question += f" [{default_show}] "
+    elif default and default is not no_value:
+        question += f" [{default}] "
     else:
         question += " "
 
     while True:
         resp = input(question)
-        if not resp and default is not no_value:
-            resp = default
+        if not resp:
+            if default is None:
+                return None
+            if default is not no_value:
+                resp = default
 
         try:
             return validator(resp, **kwargs)
@@ -106,6 +112,8 @@ def prompt_bool(question, default=False, yes="y", no="n"):
 
 
 def make_folder(folder, pretend=False):
+    if pretend:
+        return
     if not folder.exists():
         try:
             os.makedirs(str(folder))
@@ -165,35 +173,46 @@ def get_jinja_renderer(src_path, data=None, envops=None):
     return Renderer(env=env, src_path=src_path, data=data)
 
 
-def normalize(text, form="NFD"):
+def normalize_str(text, form="NFD"):
     """Normalize unicode text. Uses the NFD algorithm by default."""
     return unicodedata.normalize(form, text)
 
 
-def get_name_filter(exclude, include):
+def get_name_filters(exclude, include, skip_if_exists):
     """Returns a function that evaluates if a file or folder name must be
-    filtered out.
+    filtered out, and another that evaluates if a file must be skipped.
     The compared paths are first converted to unicode and decomposed.
     This is neccesary because the way PY2.* `os.walk` read unicode
     paths in different filesystems. For instance, in OSX, it returns a
     decomposed unicode string. In those systems, u'ñ' is read as `\u0303`
     instead of `\xf1`.
     """
-    exclude = [normalize(f) for f in exclude]
-    include = [normalize(f) for f in include]
+    exclude = [normalize_str(pattern) for pattern in exclude]
+    include = [normalize_str(pattern) for pattern in include]
+    skip_if_exists = [normalize_str(pattern) for pattern in skip_if_exists]
 
     def fullmatch(path, pattern):
-        path = normalize(str(path))
+        path = normalize_str(str(path))
         name = os.path.basename(path)
         return fnmatch(name, pattern) or fnmatch(path, pattern)
 
-    def must_be_filtered(name):
-        return reduce(lambda r, pattern: r or fullmatch(name, pattern), exclude, False)
+    def match(path, patterns):
+        return reduce(
+            lambda r, pattern: r or fullmatch(path, pattern),
+            patterns,
+            False
+        )
 
-    def must_be_included(name):
-        return reduce(lambda r, pattern: r or fullmatch(name, pattern), include, False)
+    def must_be_filtered(path):
+        return match(path, exclude)
+
+    def must_be_included(path):
+        return match(path, include)
+
+    def must_skip(path):
+        return match(path, skip_if_exists)
 
     def must_filter(path):
         return must_be_filtered(path) and not must_be_included(path)
 
-    return must_filter
+    return must_filter, must_skip

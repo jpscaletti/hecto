@@ -6,6 +6,7 @@ import pytest
 from .helpers import assert_file
 from .helpers import DATA
 from .helpers import filecmp
+from .helpers import make_folder
 from .helpers import PROJECT_TEMPLATE
 from .helpers import render
 
@@ -62,37 +63,89 @@ def test_exclude_file(dst):
     assert not (dst / "doc" / "mañana.txt").exists()
 
 
+def test_skip_if_exists(dst):
+    (dst / "aaaa.txt").write_text("SKIPPED aaaa.txt")
+    (dst / "config.py").write_text("SKIPPED config.py")
+    make_folder(dst / "awesome")
+    (dst / "awesome" / "hello.txt").write_text("SKIPPED hello.txt")
+    (dst / ".gitignore").write_text("SKIPPED")
+
+    hecto.copy(
+        PROJECT_TEMPLATE,
+        dst,
+        data=DATA,
+        quiet=True,
+        force=True,
+        skip_if_exists=["aa*.txt", "config.py", "[[ myvar ]]/hello.txt"]
+    )
+
+    assert (dst / "aaaa.txt").read_text() == "SKIPPED aaaa.txt"
+    assert (dst / "config.py").read_text() == "SKIPPED config.py"
+    assert (dst / "awesome" / "hello.txt").read_text() == "SKIPPED hello.txt"
+    assert (dst / ".gitignore").read_text() != "SKIPPED .gitignore"
+
+
+def test_config_skip_if_exists(dst):
+    (dst / "aaaa.txt").write_text("SKIPPED aaaa.txt")
+    (dst / "config.py").write_text("SKIPPED config.py")
+    make_folder(dst / "awesome")
+    (dst / "awesome" / "hello.txt").write_text("SKIPPED hello.txt")
+    (dst / ".gitignore").write_text("SKIPPED .gitignore")
+
+    def load_fake_data(*_args, **_kw):
+        return {
+            "skip_if_exists": ["aa*.txt", "config.py", "[[ myvar ]]/hello.txt"]
+        }
+
+    _get_defaults = hecto.main.load_defaults
+    hecto.main.load_defaults = load_fake_data
+
+    hecto.copy(
+        PROJECT_TEMPLATE,
+        dst,
+        data=DATA,
+        quiet=True,
+        force=True,
+    )
+
+    assert (dst / "aaaa.txt").read_text() == "SKIPPED aaaa.txt"
+    assert (dst / "config.py").read_text() == "SKIPPED config.py"
+    assert (dst / "awesome" / "hello.txt").read_text() == "SKIPPED hello.txt"
+    assert (dst / ".gitignore").read_text() != "SKIPPED .gitignore"
+    hecto.main.load_defaults = _get_defaults
+
+
 def test_config_exclude(dst):
     def load_fake_data(*_args, **_kw):
         return {"exclude": ["*.txt"]}
 
-    _get_dafaults = hecto.main.load_defaults
+    _get_defaults = hecto.main.load_defaults
     hecto.main.load_defaults = load_fake_data
     hecto.copy(PROJECT_TEMPLATE, dst, data=DATA, quiet=True)
     assert not (dst / "aaaa.txt").exists()
-    hecto.main.load_defaults = _get_dafaults
+    hecto.main.load_defaults = _get_defaults
 
 
-def test_config_exclude_overwrited(dst):
+def test_config_exclude_overridden(dst):
     def load_fake_data(*_args, **_kw):
         return {"exclude": ["*.txt"]}
 
-    _get_dafaults = hecto.main.load_defaults
+    _get_defaults = hecto.main.load_defaults
     hecto.main.load_defaults = load_fake_data
     hecto.copy(PROJECT_TEMPLATE, dst, data=DATA, quiet=True, exclude=[])
     assert (dst / "aaaa.txt").exists()
-    hecto.main.load_defaults = _get_dafaults
+    hecto.main.load_defaults = _get_defaults
 
 
 def test_config_include(dst):
     def load_fake_data(*_args, **_kw):
         return {"include": [".svn"]}
 
-    _get_dafaults = hecto.main.load_defaults
+    _get_defaults = hecto.main.load_defaults
     hecto.main.load_defaults = load_fake_data
     hecto.copy(PROJECT_TEMPLATE, dst, data=DATA, quiet=True)
     assert (dst / ".svn").exists()
-    hecto.main.load_defaults = _get_dafaults
+    hecto.main.load_defaults = _get_defaults
 
 
 def test_skip_option(dst):

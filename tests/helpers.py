@@ -1,6 +1,7 @@
 from hashlib import sha1
 from pathlib import Path
 import filecmp
+import errno
 import os
 
 import hecto
@@ -28,3 +29,12 @@ def assert_file(dst, *path):
     p1 = os.path.join(str(dst), *path)
     p2 = os.path.join(str(PROJECT_TEMPLATE), *path)
     assert filecmp.cmp(p1, p2)
+
+
+def make_folder(folder):
+    if not folder.exists():
+        try:
+            os.makedirs(str(folder))
+        except OSError as e:  # pragma: no cover
+            if e.errno != errno.EEXIST:
+                raise
