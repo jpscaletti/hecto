@@ -10,7 +10,7 @@ data = {
     "version": "1.0",
     "author": "Juan-Pablo Scaletti",
     "author_email": "juanpablo@jpscaletti.com",
-    "description": "A small and simple library for rendering projects templates.",
+    "description": "(graph).",
     "copyright": "2011",
     "repo_name": "jpscaletti/hecto",
     "home_url": "",
