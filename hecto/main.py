@@ -131,11 +131,7 @@ RE_TMPL = re.compile(r"\.tmpl$", re.IGNORECASE)
 
 
 def resolve_source_path(src_path):
-    try:
-        src_path = Path(src_path).resolve()
-    except FileNotFoundError:
-        raise ValueError("Project template not found")
-
+    src_path = Path(src_path).resolve()
     if not src_path.exists():
         raise ValueError("Project template not found")
 
@@ -165,7 +161,7 @@ def copy_local(
     default_exclude = defaults.pop("exclude", None)
     if exclude is None:
         exclude = default_exclude or DEFAULT_EXCLUDE
-    exclude.append("hecto.yml")
+    exclude.extend(["hecto.yaml", "hecto.yml"])
 
     default_include = defaults.pop("include", None)
     if include is None:
@@ -203,9 +199,11 @@ def copy_local(
 
 
 def load_defaults(src_path, **flags):
-    defaults_path = Path(src_path) / "hecto.yml"
+    defaults_path = Path(src_path) / "hecto.yaml"
     if not defaults_path.exists():
-        return {}
+        defaults_path = Path(src_path) / "hecto.yml"
+        if not defaults_path.exists():
+            return {}
     try:
         return yaml.safe_load(defaults_path.read_text())
     except yaml.YAMLError:

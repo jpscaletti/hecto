@@ -21,7 +21,6 @@ def test_project_not_found(dst):
 
 def test_copy(dst):
     render(dst)
-
     generated = (dst / "pyproject.toml").read_text()
     control = (Path(__file__).parent / "references" / "pyproject.toml").read_text()
     assert generated == control
@@ -61,6 +60,11 @@ def test_include_pattern(dst):
 def test_exclude_file(dst):
     render(dst, exclude=["mañana.txt"])
     assert not (dst / "doc" / "mañana.txt").exists()
+
+
+def test_exclude_folder(dst):
+    render(dst, exclude=["doc", "doc/*"])
+    assert not (dst / "doc").exists()
 
 
 def test_skip_if_exists(dst):

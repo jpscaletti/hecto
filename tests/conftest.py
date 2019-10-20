@@ -14,8 +14,9 @@ def dst(request):
     function invocation. This folder is deleted after the test has finished.
     """
     dst = mkdtemp()
-    request.addfinalizer(lambda: shutil.rmtree(dst, ignore_errors=True))
-    return Path(dst)
+    dst = Path(dst).resolve()
+    request.addfinalizer(lambda: shutil.rmtree(str(dst), ignore_errors=True))
+    return dst
 
 
 class AppendableStringIO(six.StringIO):

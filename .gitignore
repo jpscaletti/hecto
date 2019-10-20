@@ -13,8 +13,10 @@ __pycache__
 .eggs/
 .env
 .installed.cfg
+.mypy_cache/*
 .tox
 .venv
+_build/*
 build/
 covreport
 develop-eggs/
@@ -23,8 +25,10 @@ downloads/
 eggs/
 lib/
 lib64/
+MANIFEST
 parts/
 pip-wheel-metadata
 sdist/
+site/*
 var/
 wheels/
