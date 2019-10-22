@@ -3,15 +3,12 @@ import filecmp
 import os
 import re
 import shutil
-import subprocess
 from pathlib import Path
 
 import yaml
 
 from . import vcs
 from .tools import copy_file
-from .tools import get_jinja_renderer
-from .tools import get_name_filters
 from .tools import make_folder
 from .tools import printf
 from .tools import printf_exception
@@ -21,6 +18,9 @@ from .tools import STYLE_IGNORE
 from .tools import STYLE_OK
 from .tools import STYLE_WARNING
 
+from .utils import JinjaRender
+from .utils import make_matcher
+from .utils import make_filter
 
 __all__ = ("copy", "copy_local", "load_defaults")
 
@@ -171,10 +171,22 @@ def copy_local(
     if skip_if_exists is None:
         skip_if_exists = default_skip_if_exists or []
 
-    render = get_jinja_renderer(src_path, data, envops)
-    skip_if_exists = [render.string(pattern) for pattern in skip_if_exists]
-    must_filter, must_skip = get_name_filters(exclude, include, skip_if_exists)
     data.setdefault("folder_name", dst_path.name)
+    envops = envops or {}
+    envops.setdefault("block_start_string", "[%")
+    envops.setdefault("block_end_string", "%]")
+    envops.setdefault("variable_start_string", "[[")
+    envops.setdefault("variable_end_string", "]]")
+    render = JinjaRender(src_path, data, envops)
+
+    exclude = [render.string(pattern) for pattern in exclude]
+    include = [render.string(pattern) for pattern in include]
+    skip_if_exists = [render.string(pattern) for pattern in skip_if_exists]
+
+    must_exclude = make_matcher(exclude)
+    must_include = make_matcher(include)
+    must_filter = make_filter(must_exclude, must_include)
+    must_skip = make_matcher(skip_if_exists)
 
     if not flags["quiet"]:
         print("")  # padding space

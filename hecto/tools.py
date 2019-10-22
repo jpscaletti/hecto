@@ -1,12 +1,7 @@
-from fnmatch import fnmatch
-from functools import reduce
 import errno
 import os
 import shutil
-import unicodedata
 
-import jinja2
-from jinja2.sandbox import SandboxedEnvironment
 import colorama
 from colorama import Fore, Style
 
@@ -124,93 +119,3 @@ def make_folder(folder, pretend=False):
 
 def copy_file(src, dst):
     shutil.copy2(str(src), str(dst))
-
-
-# The default env options for jinja2
-DEFAULT_ENV_OPTIONS = {
-    "autoescape": False,
-    "block_start_string": "[%",
-    "block_end_string": "%]",
-    "variable_start_string": "[[",
-    "variable_end_string": "]]",
-    "keep_trailing_newline": True,
-}
-
-
-class Renderer(object):
-    def __init__(self, env, src_path, data):
-        self.env = env
-        self.src_path = src_path
-        self.data = data
-
-    def __call__(self, fullpath):
-        relpath = str(fullpath).replace(self.src_path, "", 1).lstrip(os.path.sep)
-        tmpl = self.env.get_template(relpath)
-        return tmpl.render(**self.data)
-
-    def string(self, string):
-        tmpl = self.env.from_string(string)
-        return tmpl.render(**self.data)
-
-
-def get_jinja_renderer(src_path, data=None, envops=None):
-    """Returns a function that can render a Jinja template.
-    """
-    # Jinja <= 2.10 does not work with `pathlib.Path`s
-    src_path = str(src_path)
-    data = data or {}
-
-    _envops = DEFAULT_ENV_OPTIONS.copy()
-    _envops.update(envops or {})
-    _envops.setdefault("loader", jinja2.FileSystemLoader(src_path))
-
-    # We want to minimize the risk of hidden malware in the templates
-    # so we use the SandboxedEnvironment instead of the regular one.
-    env = SandboxedEnvironment(**_envops)
-
-    return Renderer(env=env, src_path=src_path, data=data)
-
-
-def normalize_str(text, form="NFD"):
-    """Normalize unicode text. Uses the NFD algorithm by default."""
-    return unicodedata.normalize(form, text)
-
-
-def get_name_filters(exclude, include, skip_if_exists):
-    """Returns a function that evaluates if a file or folder name must be
-    filtered out, and another that evaluates if a file must be skipped.
-    The compared paths are first converted to unicode and decomposed.
-    This is neccesary because the way PY2.* `os.walk` read unicode
-    paths in different filesystems. For instance, in OSX, it returns a
-    decomposed unicode string. In those systems, u'ñ' is read as `\u0303`
-    instead of `\xf1`.
-    """
-    exclude = [normalize_str(pattern) for pattern in exclude]
-    include = [normalize_str(pattern) for pattern in include]
-    skip_if_exists = [normalize_str(pattern) for pattern in skip_if_exists]
-
-    def fullmatch(path, pattern):
-        path = normalize_str(str(path))
-        name = os.path.basename(path)
-        return fnmatch(name, pattern) or fnmatch(path, pattern)
-
-    def match(path, patterns):
-        return reduce(
-            lambda r, pattern: r or fullmatch(path, pattern),
-            patterns,
-            False
-        )
-
-    def must_be_filtered(path):
-        return match(path, exclude)
-
-    def must_be_included(path):
-        return match(path, include)
-
-    def must_skip(path):
-        return match(path, skip_if_exists)
-
-    def must_filter(path):
-        return must_be_filtered(path) and not must_be_included(path)
-
-    return must_filter, must_skip

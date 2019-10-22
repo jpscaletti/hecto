@@ -1,15 +1,6 @@
 import pytest
 
-from hecto import get_jinja_renderer, prompt, prompt_bool
-
-from .helpers import PROJECT_TEMPLATE, DATA
-
-
-def test_render(dst):
-    render = get_jinja_renderer(PROJECT_TEMPLATE, DATA)
-
-    assert render.string("/hello/[[ what ]]/") == "/hello/world/"
-    assert render.string("/hello/world/") == "/hello/world/"
+from hecto import prompt, prompt_bool
 
 
 def test_prompt(stdin, capsys):
