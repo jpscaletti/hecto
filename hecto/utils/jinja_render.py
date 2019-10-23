@@ -1,7 +1,6 @@
 import os
 
 import jinja2
-from jinja2 import Environment
 from jinja2.sandbox import SandboxedEnvironment
 
 
@@ -11,7 +10,7 @@ ENVOPS_DEFAULT = {"autoescape": False, "keep_trailing_newline": True}
 
 
 class JinjaRender(object):
-    def __init__(self, src_path, data, envops=None, *, sandboxed=True):
+    def __init__(self, src_path, data, envops=None):
         # Jinja <= 2.10 does not work with `pathlib.Path`s
         self.src_path = str(src_path)
         self.data = data
@@ -19,10 +18,7 @@ class JinjaRender(object):
         _envops = ENVOPS_DEFAULT.copy()
         _envops.update(envops or {})
         _envops.setdefault("loader", jinja2.FileSystemLoader(self.src_path))
-        if sandboxed:  # pragma: no cover
-            self.env = SandboxedEnvironment(**_envops)
-        else:  # pragma: no cover
-            self.env = Environment(**_envops)
+        self.env = SandboxedEnvironment(**_envops)
 
     def __call__(self, fullpath):
         relpath = str(fullpath).replace(self.src_path, "", 1).lstrip(os.path.sep)

@@ -8,36 +8,33 @@ from pathlib import Path
 import yaml
 
 from . import vcs
-from .tools import copy_file
-from .tools import make_folder
-from .tools import printf
-from .tools import printf_exception
-from .tools import prompt_bool
-from .tools import STYLE_DANGER
-from .tools import STYLE_IGNORE
-from .tools import STYLE_OK
-from .tools import STYLE_WARNING
-
+from .utils import copy_file
 from .utils import JinjaRender
-from .utils import make_matcher
+from .utils import load_config
 from .utils import make_filter
+from .utils import make_folder
+from .utils import make_matcher
+from .utils import printf, printf_exception, Style
+from .utils import prompt_bool
 
-__all__ = ("copy", "copy_local", "load_defaults")
 
-# Files of the template to exclude from the final project
-DEFAULT_EXCLUDE = [
-    "~*",
-    "*.py[co]",
-    "__pycache__",
-    "__pycache__/*",
-    ".git",
-    ".git/*",
-    ".DS_Store",
-    ".svn",
-    ".hg",
-]
+__all__ = ("copy", "copy_local")
 
-DEFAULT_INCLUDE = ()
+GLOBAL_DEFAULTS = {
+    "exclude": [
+        "~*",
+        "*.py[co]",
+        "__pycache__",
+        "__pycache__/*",
+        ".git",
+        ".git/*",
+        ".DS_Store",
+        ".svn",
+        ".hg",
+    ],
+    "include": [],
+    "skip_if_exists": [],
+}
 
 DEFAULT_DATA = {"now": datetime.datetime.utcnow}
 
@@ -54,7 +51,7 @@ def copy(
     pretend=False,
     force=False,
     skip=False,
-    quiet=False
+    quiet=False,
 ):
     """
     Uses the template in src_path to generate a new project at dst_path.
@@ -149,44 +146,31 @@ def copy_local(
     exclude=None,
     include=None,
     skip_if_exists=None,
-    extra_paths=None,
     envops=None,
-    **flags
+    **flags,
 ):
     src_path = resolve_source_path(src_path)
     dst_path = Path(dst_path).resolve()
 
-    defaults = load_defaults(src_path, **flags)
+    config = get_config(src_path, exclude, include, skip_if_exists, flags)
+    config["exclude"].extend(["hecto.yaml", "hecto.yml"])
 
-    default_exclude = defaults.pop("exclude", None)
-    if exclude is None:
-        exclude = default_exclude or DEFAULT_EXCLUDE
-    exclude.extend(["hecto.yaml", "hecto.yml"])
-
-    default_include = defaults.pop("include", None)
-    if include is None:
-        include = default_include or DEFAULT_INCLUDE
-
-    default_skip_if_exists = defaults.pop("skip_if_exists", None)
-    if skip_if_exists is None:
-        skip_if_exists = default_skip_if_exists or []
-
-    data.setdefault("folder_name", dst_path.name)
     envops = envops or {}
     envops.setdefault("block_start_string", "[%")
     envops.setdefault("block_end_string", "%]")
     envops.setdefault("variable_start_string", "[[")
     envops.setdefault("variable_end_string", "]]")
+    data.setdefault("folder_name", dst_path.name)
     render = JinjaRender(src_path, data, envops)
 
-    exclude = [render.string(pattern) for pattern in exclude]
-    include = [render.string(pattern) for pattern in include]
-    skip_if_exists = [render.string(pattern) for pattern in skip_if_exists]
+    exclude_ = [render.string(pattern) for pattern in config["exclude"]]
+    include_ = [render.string(pattern) for pattern in config["include"]]
+    skip_if_exists_ = [render.string(pattern) for pattern in config["skip_if_exists"]]
 
-    must_exclude = make_matcher(exclude)
-    must_include = make_matcher(include)
+    must_exclude = make_matcher(exclude_)
+    must_include = make_matcher(include_)
     must_filter = make_filter(must_exclude, must_include)
-    must_skip = make_matcher(skip_if_exists)
+    must_skip = make_matcher(skip_if_exists_)
 
     if not flags["quiet"]:
         print("")  # padding space
@@ -210,21 +194,27 @@ def copy_local(
             render_file(dst_path, rel_path, source_path, render, must_skip, flags)
 
 
-def load_defaults(src_path, **flags):
-    defaults_path = Path(src_path) / "hecto.yaml"
-    if not defaults_path.exists():
-        defaults_path = Path(src_path) / "hecto.yml"
-        if not defaults_path.exists():
-            return {}
+def get_config(src_path, exclude, include, skip_if_exists, flags):
     try:
-        return yaml.safe_load(defaults_path.read_text())
+        return load_config(
+            GLOBAL_DEFAULTS,
+            {
+                "exclude": exclude,
+                "include": include,
+                "skip_if_exists": skip_if_exists,
+            },
+            [
+                src_path / "hecto.yaml",
+                src_path / "hecto.yml",
+            ],
+        )
     except yaml.YAMLError:
         printf_exception(
             "INVALID CONFIG FILE",
-            msg=str(defaults_path),
+            msg="hecto.yaml",
             quiet=flags.get("quiet")
         )
-        return {}
+        return GLOBAL_DEFAULTS
 
 
 def get_source_paths(folder, rel_folder, files, render, must_filter):
@@ -249,11 +239,11 @@ def render_folder(dst_path, rel_folder, flags):
         return
 
     if final_path.exists():
-        printf("identical", display_path, style=STYLE_IGNORE, quiet=flags["quiet"])
+        printf("identical", display_path, style=Style.IGNORE, quiet=flags["quiet"])
         return
 
     make_folder(final_path, pretend=flags["pretend"])
-    printf("create", display_path, style=STYLE_OK, quiet=flags["quiet"])
+    printf("create", display_path, style=Style.OK, quiet=flags["quiet"])
 
 
 def render_file(dst_path, rel_path, source_path, render, must_skip, flags):
@@ -269,22 +259,20 @@ def render_file(dst_path, rel_path, source_path, render, must_skip, flags):
 
     if final_path.exists():
         if file_is_identical(source_path, final_path, content):
-            printf("identical", display_path, style=STYLE_IGNORE, quiet=flags["quiet"])
+            printf("identical", display_path, style=Style.IGNORE, quiet=flags["quiet"])
             return
 
         if must_skip(rel_path):
-            printf("skip", display_path, style=STYLE_WARNING, quiet=flags["quiet"])
+            printf("skip", display_path, style=Style.WARNING, quiet=flags["quiet"])
             return
 
-        if overwrite_file(
-            display_path, source_path, final_path, content, flags
-        ):
-            printf("force", display_path, style=STYLE_WARNING, quiet=flags["quiet"])
+        if overwrite_file(display_path, source_path, final_path, content, flags):
+            printf("force", display_path, style=Style.WARNING, quiet=flags["quiet"])
         else:
-            printf("skip", display_path, style=STYLE_WARNING, quiet=flags["quiet"])
+            printf("skip", display_path, style=Style.WARNING, quiet=flags["quiet"])
             return
     else:
-        printf("create", display_path, style=STYLE_OK, quiet=flags["quiet"])
+        printf("create", display_path, style=Style.OK, quiet=flags["quiet"])
 
     if flags["pretend"]:
         return
@@ -311,7 +299,7 @@ def file_has_this_content(path, content):
 
 
 def overwrite_file(display_path, source_path, final_path, content, flags):
-    printf("conflict", display_path, style=STYLE_DANGER, quiet=flags["quiet"])
+    printf("conflict", display_path, style=Style.DANGER, quiet=flags["quiet"])
     if flags["force"]:
         return True
     if flags["skip"]:  # pragma: no cover

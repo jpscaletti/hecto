@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import hecto
 import pytest
@@ -89,69 +90,6 @@ def test_skip_if_exists(dst):
     assert (dst / ".gitignore").read_text() != "SKIPPED .gitignore"
 
 
-def test_config_skip_if_exists(dst):
-    (dst / "aaaa.txt").write_text("SKIPPED aaaa.txt")
-    (dst / "config.py").write_text("SKIPPED config.py")
-    make_folder(dst / "awesome")
-    (dst / "awesome" / "hello.txt").write_text("SKIPPED hello.txt")
-    (dst / ".gitignore").write_text("SKIPPED .gitignore")
-
-    def load_fake_data(*_args, **_kw):
-        return {
-            "skip_if_exists": ["aa*.txt", "config.py", "[[ myvar ]]/hello.txt"]
-        }
-
-    _get_defaults = hecto.main.load_defaults
-    hecto.main.load_defaults = load_fake_data
-
-    hecto.copy(
-        PROJECT_TEMPLATE,
-        dst,
-        data=DATA,
-        quiet=True,
-        force=True,
-    )
-
-    assert (dst / "aaaa.txt").read_text() == "SKIPPED aaaa.txt"
-    assert (dst / "config.py").read_text() == "SKIPPED config.py"
-    assert (dst / "awesome" / "hello.txt").read_text() == "SKIPPED hello.txt"
-    assert (dst / ".gitignore").read_text() != "SKIPPED .gitignore"
-    hecto.main.load_defaults = _get_defaults
-
-
-def test_config_exclude(dst):
-    def load_fake_data(*_args, **_kw):
-        return {"exclude": ["*.txt"]}
-
-    _get_defaults = hecto.main.load_defaults
-    hecto.main.load_defaults = load_fake_data
-    hecto.copy(PROJECT_TEMPLATE, dst, data=DATA, quiet=True)
-    assert not (dst / "aaaa.txt").exists()
-    hecto.main.load_defaults = _get_defaults
-
-
-def test_config_exclude_overridden(dst):
-    def load_fake_data(*_args, **_kw):
-        return {"exclude": ["*.txt"]}
-
-    _get_defaults = hecto.main.load_defaults
-    hecto.main.load_defaults = load_fake_data
-    hecto.copy(PROJECT_TEMPLATE, dst, data=DATA, quiet=True, exclude=[])
-    assert (dst / "aaaa.txt").exists()
-    hecto.main.load_defaults = _get_defaults
-
-
-def test_config_include(dst):
-    def load_fake_data(*_args, **_kw):
-        return {"include": [".svn"]}
-
-    _get_defaults = hecto.main.load_defaults
-    hecto.main.load_defaults = load_fake_data
-    hecto.copy(PROJECT_TEMPLATE, dst, data=DATA, quiet=True)
-    assert (dst / ".svn").exists()
-    hecto.main.load_defaults = _get_defaults
-
-
 def test_skip_option(dst):
     render(dst)
     path = dst / "pyproject.toml"
@@ -175,3 +113,18 @@ def test_pretend_option(dst):
     assert not (dst / "doc").exists()
     assert not (dst / "config.py").exists()
     assert not (dst / "pyproject.toml").exists()
+
+
+ROOT_PATH = Path(__file__).parent
+
+
+def test_invalid_yaml(dst, capsys):
+    hecto.copy(ROOT_PATH / "demo_invalid_defaults", dst)
+    out, err = capsys.readouterr()
+    assert re.search(r"INVALID CONFIG FILE.*hecto\.yaml", out)
+
+
+def test_invalid_quiet(dst, capsys):
+    hecto.copy(ROOT_PATH / "demo_invalid_defaults", dst, quiet=True)
+    out, err = capsys.readouterr()
+    assert out == ""

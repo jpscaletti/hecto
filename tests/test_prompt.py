@@ -1,6 +1,6 @@
 import pytest
 
-from hecto import prompt, prompt_bool
+from hecto.utils import prompt, prompt_bool
 
 
 def test_prompt(stdin, capsys):

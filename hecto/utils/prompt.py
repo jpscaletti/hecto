@@ -1,41 +1,9 @@
-import errno
-import os
-import shutil
-
-import colorama
-from colorama import Fore, Style
 
 
-_all__ = (
-    "STYLE_OK",
-    "STYLE_WARNING",
-    "STYLE_IGNORE",
-    "STYLE_DANGER",
-    "printf",
-    "printf_exception",
+__all__ = (
     "prompt",
     "prompt_bool",
 )
-
-colorama.init()
-
-STYLE_OK = [Fore.GREEN, Style.BRIGHT]
-STYLE_WARNING = [Fore.YELLOW, Style.BRIGHT]
-STYLE_IGNORE = [Fore.CYAN]
-STYLE_DANGER = [Fore.RED, Style.BRIGHT]
-
-
-def printf(action, msg, style, indent=10, quiet=False):
-    if quiet:
-        return
-    action = action.rjust(indent, " ")
-    out = style + [action, Fore.RESET, Style.RESET_ALL, "  ", msg]
-    print(*out, sep="")
-
-
-def printf_exception(action, msg="", quiet=False):
-    if not quiet:
-        return printf(action, msg, style=STYLE_DANGER)
 
 
 no_value = object()
@@ -104,18 +72,3 @@ def prompt_bool(question, default=False, yes="y", no="n"):
     return prompt(
         question, default=default, default_show=default_show, validator=validator
     )
-
-
-def make_folder(folder, pretend=False):
-    if pretend:
-        return
-    if not folder.exists():
-        try:
-            os.makedirs(str(folder))
-        except OSError as e:  # pragma: no cover
-            if e.errno != errno.EEXIST:
-                raise
-
-
-def copy_file(src, dst):
-    shutil.copy2(str(src), str(dst))
