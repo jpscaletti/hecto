@@ -68,5 +68,5 @@ def _load_user_defaults(src_files):
         path = Path(path)
         if not path.exists():
             continue
-        return yaml.safe_load(path.read_text())
+        return yaml.safe_load(path.read_text()) or {}
     return {}

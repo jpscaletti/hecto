@@ -34,10 +34,7 @@ copy('gl:jpscaletti/hecto.git', 'path/to/destination')
 
 ## How it works
 
-The content of the files inside the project template are copied to the destination
-without changes, **unless are suffixed with the extension '.tmpl'.** (you can change
-that with the `render` setting). In that case, the templating engine is used to
-render them.
+The content of the files inside the project template are copied to the destination without changes, **unless are suffixed with the extension '.tmpl'.** (you can customize that with the `render_as` setting). In that case, the templating engine is used to render them.
 
 A slightly customized Jinja2 templates are used. The main difference is
 that variables are referenced with ``[[ name ]]`` instead of
@@ -61,11 +58,11 @@ hecto.copy(
 
     data=DEFAULT_DATA,
     *,
-    render=DEFAULT_RENDER,
     exclude=DEFAULT_EXCLUDE,
     include=[],
     skip_if_exists=[],
     envops={},
+    render_as=DEFAULT_RENDER_AS,
 
     pretend=False,
     force=False,
@@ -87,10 +84,6 @@ Uses the template in `src_path` to generate a new project at `dst_path`.
 - **data** (dict):<br>
     Optional. Data to be passed to the templates.
 
-- **render** (list of str):<br>
-    A list of names or shell-style patterns matching files that must be rendered
-    with Jinja. `["*.tmpl"]` by default.
-
 - **exclude** (list of str):<br>
     Optional. A list of names or shell-style patterns matching files or folders
     that must not be copied.
@@ -105,6 +98,13 @@ Uses the template in `src_path` to generate a new project at `dst_path`.
 
 - **envops** (dict):<br>
     Optional. Extra options for the Jinja template environment.
+
+- **render_as** (function):<br>
+    An optional hook that takes the absolute source path and the relative destination path of a file as arguments.
+
+    It should return `None` if the file must be copied as-is or a Path object of the new relative destination (can be the same as the one received).
+
+    By default all the files with the `.tmpl` postfix are rendered and saved without that postfix. Eg: `readme.md.tmpl` becomes `readme.md`.
 
 - **pretend** (bool):<br>
     Optional. Run but do not make any changes
@@ -126,10 +126,6 @@ If a YAML file named `hecto.yaml` is found in the root of the project, it will b
 Note that they become just _the defaults_, so any explicitly-passed argument will overwrite them.
 
 ```yaml
-# Shell-style patterns files/folders that must be rendered.
-render:
-    - "*.tmpl"
-
 # Shell-style patterns files/folders that must not be copied.
 exclude:
   - "*.bar"
