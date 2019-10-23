@@ -21,6 +21,7 @@ from .utils import prompt_bool
 __all__ = ("copy", "copy_local")
 
 GLOBAL_DEFAULTS = {
+    "render": ["*.tmpl"],
     "exclude": [
         "~*",
         "*.py[co]",
@@ -44,6 +45,7 @@ def copy(
     dst_path,
     data=None,
     *,
+    render=None,
     exclude=None,
     include=None,
     skip_if_exists=None,
@@ -67,6 +69,10 @@ def copy(
     - data (dict):
         Optional. Data to be passed to the templates in addtion to the user data from
         a `hecto.json`.
+
+    - render (list):
+        A list of names or shell-style patterns matching files that must be rendered
+        with Jinja. `["*.tmpl"]` by default.
 
     - exclude (list):
         A list of names or shell-style patterns matching files or folders
@@ -110,6 +116,7 @@ def copy(
             src_path,
             dst_path,
             data=_data,
+            render=render,
             exclude=exclude,
             include=include,
             skip_if_exists=skip_if_exists,
@@ -143,6 +150,7 @@ def copy_local(
     dst_path,
     data,
     *,
+    render=None,
     exclude=None,
     include=None,
     skip_if_exists=None,
@@ -152,7 +160,13 @@ def copy_local(
     src_path = resolve_source_path(src_path)
     dst_path = Path(dst_path).resolve()
 
-    config = get_config(src_path, exclude, include, skip_if_exists, flags)
+    user_settings = {
+        "render": render,
+        "exclude": exclude,
+        "include": include,
+        "skip_if_exists": skip_if_exists,
+    }
+    config = get_config(user_settings, src_path, flags)
     config["exclude"].extend(["hecto.yaml", "hecto.yml"])
 
     envops = envops or {}
@@ -161,23 +175,27 @@ def copy_local(
     envops.setdefault("variable_start_string", "[[")
     envops.setdefault("variable_end_string", "]]")
     data.setdefault("folder_name", dst_path.name)
-    render = JinjaRender(src_path, data, envops)
+    jrender = JinjaRender(src_path, data, envops)
 
-    exclude_ = [render.string(pattern) for pattern in config["exclude"]]
-    include_ = [render.string(pattern) for pattern in config["include"]]
-    skip_if_exists_ = [render.string(pattern) for pattern in config["skip_if_exists"]]
+    render_patterns = [jrender.string(pattern) for pattern in config["render"]]
+    exclude_patterns = [jrender.string(pattern) for pattern in config["exclude"]]
+    include_patterns = [jrender.string(pattern) for pattern in config["include"]]
+    skip_if_exists_patterns = [
+        jrender.string(pattern) for pattern in config["skip_if_exists"]
+    ]
 
-    must_exclude = make_matcher(exclude_)
-    must_include = make_matcher(include_)
+    must_render = make_matcher(render_patterns)
+    must_exclude = make_matcher(exclude_patterns)
+    must_include = make_matcher(include_patterns)
     must_filter = make_filter(must_exclude, must_include)
-    must_skip = make_matcher(skip_if_exists_)
+    must_skip_if_exists = make_matcher(skip_if_exists_patterns)
 
     if not flags["quiet"]:
         print("")  # padding space
 
     for folder, _, files in os.walk(str(src_path)):
         rel_folder = folder.replace(str(src_path), "", 1).lstrip(os.path.sep)
-        rel_folder = render.string(rel_folder)
+        rel_folder = jrender.string(rel_folder)
         rel_folder = rel_folder.replace("." + os.path.sep, ".", 1)
 
         if must_filter(rel_folder):
@@ -188,40 +206,39 @@ def copy_local(
 
         render_folder(dst_path, rel_folder, flags)
 
-        source_paths = get_source_paths(folder, rel_folder, files, render, must_filter)
+        source_paths = get_source_paths(folder, rel_folder, files, jrender, must_filter)
 
         for source_path, rel_path in source_paths:
-            render_file(dst_path, rel_path, source_path, render, must_skip, flags)
+            render_file(
+                dst_path,
+                rel_path,
+                source_path,
+                jrender,
+                must_render,
+                must_skip_if_exists,
+                flags,
+            )
 
 
-def get_config(src_path, exclude, include, skip_if_exists, flags):
+def get_config(user_settings, src_path, flags):
     try:
         return load_config(
             GLOBAL_DEFAULTS,
-            {
-                "exclude": exclude,
-                "include": include,
-                "skip_if_exists": skip_if_exists,
-            },
-            [
-                src_path / "hecto.yaml",
-                src_path / "hecto.yml",
-            ],
+            user_settings,
+            [src_path / "hecto.yaml", src_path / "hecto.yml"],
         )
     except yaml.YAMLError:
         printf_exception(
-            "INVALID CONFIG FILE",
-            msg="hecto.yaml",
-            quiet=flags.get("quiet")
+            "INVALID CONFIG FILE", msg="hecto.yaml", quiet=flags.get("quiet")
         )
         return GLOBAL_DEFAULTS
 
 
-def get_source_paths(folder, rel_folder, files, render, must_filter):
+def get_source_paths(folder, rel_folder, files, jrender, must_filter):
     source_paths = []
     for src_name in files:
         dst_name = re.sub(RE_TMPL, "", src_name)
-        dst_name = render.string(dst_name)
+        dst_name = jrender.string(dst_name)
         rel_path = rel_folder / dst_name
 
         if must_filter(rel_path):
@@ -246,11 +263,13 @@ def render_folder(dst_path, rel_folder, flags):
     printf("create", display_path, style=Style.OK, quiet=flags["quiet"])
 
 
-def render_file(dst_path, rel_path, source_path, render, must_skip, flags):
+def render_file(
+    dst_path, rel_path, source_path, jrender, must_render, must_skip_if_exists, flags
+):
     """Process or copy a file of the skeleton.
     """
-    if source_path.suffix == ".tmpl":
-        content = render(source_path)
+    if must_render(source_path):
+        content = jrender(source_path)
     else:
         content = None
 
@@ -262,7 +281,7 @@ def render_file(dst_path, rel_path, source_path, render, must_skip, flags):
             printf("identical", display_path, style=Style.IGNORE, quiet=flags["quiet"])
             return
 
-        if must_skip(rel_path):
+        if must_skip_if_exists(rel_path):
             printf("skip", display_path, style=Style.WARNING, quiet=flags["quiet"])
             return
 

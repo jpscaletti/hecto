@@ -35,10 +35,11 @@ copy('gl:jpscaletti/hecto.git', 'path/to/destination')
 ## How it works
 
 The content of the files inside the project template are copied to the destination
-without changes, **unless are suffixed with the extension '.tmpl'.**
-In that case, the templating engine will be used to render them.
+without changes, **unless are suffixed with the extension '.tmpl'.** (you can change
+that with the `render` setting). In that case, the templating engine is used to
+render them.
 
-A slightly customized Jinja2 templating is used. The main difference is
+A slightly customized Jinja2 templates are used. The main difference is
 that variables are referenced with ``[[ name ]]`` instead of
 ``{{ name }}`` and blocks are ``[% if name %]`` instead of
 ``{% if name %}``. To read more about templating see the [Jinja2
@@ -60,8 +61,9 @@ hecto.copy(
 
     data=DEFAULT_DATA,
     *,
-    exclude=DEFAULT_FILTER,
-    include=DEFAULT_INCLUDE,
+    render=DEFAULT_RENDER,
+    exclude=DEFAULT_EXCLUDE,
+    include=[],
     skip_if_exists=[],
     envops={},
 
@@ -84,6 +86,10 @@ Uses the template in `src_path` to generate a new project at `dst_path`.
 
 - **data** (dict):<br>
     Optional. Data to be passed to the templates.
+
+- **render** (list of str):<br>
+    A list of names or shell-style patterns matching files that must be rendered
+    with Jinja. `["*.tmpl"]` by default.
 
 - **exclude** (list of str):<br>
     Optional. A list of names or shell-style patterns matching files or folders
@@ -120,6 +126,10 @@ If a YAML file named `hecto.yaml` is found in the root of the project, it will b
 Note that they become just _the defaults_, so any explicitly-passed argument will overwrite them.
 
 ```yaml
+# Shell-style patterns files/folders that must be rendered.
+render:
+    - "*.tmpl"
+
 # Shell-style patterns files/folders that must not be copied.
 exclude:
   - "*.bar"
