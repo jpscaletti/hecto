@@ -256,7 +256,7 @@ def render_folder(dst_path, rel_folder, flags):
         return
 
     make_folder(final_path, pretend=flags["pretend"])
-    printf("create", display_path, style=Style.OK, quiet=flags["quiet"])
+    printf("created", display_path, style=Style.OK, quiet=flags["quiet"])
 
 
 def render_file(
@@ -280,16 +280,16 @@ def render_file(
             return
 
         if must_skip_if_exists(rel_path):
-            printf("skip", display_path, style=Style.WARNING, quiet=flags["quiet"])
+            printf("skipped", display_path, style=Style.WARNING, quiet=flags["quiet"])
             return
 
         if overwrite_file(display_path, source_path, final_path, content, flags):
-            printf("force", display_path, style=Style.WARNING, quiet=flags["quiet"])
+            printf("updated", display_path, style=Style.WARNING, quiet=flags["quiet"])
         else:
-            printf("skip", display_path, style=Style.WARNING, quiet=flags["quiet"])
+            printf("skipped", display_path, style=Style.WARNING, quiet=flags["quiet"])
             return
     else:
-        printf("create", display_path, style=Style.OK, quiet=flags["quiet"])
+        printf("created", display_path, style=Style.OK, quiet=flags["quiet"])
 
     if flags["pretend"]:
         return
@@ -316,11 +316,11 @@ def file_has_this_content(path, content):
 
 
 def overwrite_file(display_path, source_path, final_path, content, flags):
-    printf("conflict", display_path, style=Style.DANGER, quiet=flags["quiet"])
     if flags["force"]:
         return True
     if flags["skip"]:  # pragma: no cover
         return False
 
+    printf("conflict", display_path, style=Style.DANGER, quiet=flags["quiet"])
     msg = f" Overwrite {final_path}?"  # pragma: no cover
     return prompt_bool(msg, default=True)  # pragma: no cover
