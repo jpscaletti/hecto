@@ -31,6 +31,7 @@ def copy(
     skip_if_exists=None,
     envops=None,
     render_as=None,
+    get_context=None,
     pretend=False,
     force=False,
     skip=False,
@@ -78,6 +79,11 @@ def copy(
         By default all the files with the `.tmpl` postfix are rendered and saved
         without that postfix. Eg: `readme.md.tmpl` becomes `readme.md`.
 
+    - get_context (function):
+        An optional hook called before rendering a file. Takes the relative
+        destination path of the file as argument, and should return a dictionary
+        with the context for its rendering.
+
     - pretend (bool):
         Run but do not make any changes
 
@@ -105,6 +111,7 @@ def copy(
             skip_if_exists=skip_if_exists,
             envops=envops,
             render_as=render_as,
+            get_context=get_context,
             pretend=pretend,
             force=force,
             skip=skip,
@@ -151,11 +158,13 @@ def copy_local(
     skip_if_exists=None,
     envops=None,
     render_as=None,
+    get_context=None,
     **flags,
 ):
     src_path = resolve_source_path(src_path)
     dst_path = Path(dst_path).resolve()
     render_as = render_as or default_render_as
+    get_context = get_context
 
     user_settings = {
         "exclude": exclude,
@@ -212,6 +221,7 @@ def copy_local(
                 source_path,
                 render,
                 render_as,
+                get_context,
                 must_skip_if_exists,
                 flags,
             )
@@ -260,13 +270,21 @@ def render_folder(dst_path, rel_folder, flags):
 
 
 def render_file(
-    dst_path, rel_path, source_path, render, render_as, must_skip_if_exists, flags
+    dst_path,
+    rel_path,
+    source_path,
+    render,
+    render_as,
+    get_context,
+    must_skip_if_exists,
+    flags,
 ):
     """Process or copy a file of the skeleton.
     """
     render_to = render_as(source_path, rel_path)
     if render_to:
-        content = render(source_path)
+        context = get_context(rel_path) if get_context else {}
+        content = render(source_path, **context)
         rel_path = render_to
     else:
         content = None

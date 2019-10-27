@@ -7,7 +7,7 @@ data = {
     "title": "Hecto",
     "name": "hecto",
     "pypi_name": "hecto",
-    "version": "1.191025",
+    "version": "1.191026",
     "author": "Juan-Pablo Scaletti",
     "author_email": "juanpablo@jpscaletti.com",
     "description": "(graph).",

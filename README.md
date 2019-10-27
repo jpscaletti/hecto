@@ -1,4 +1,4 @@
-**NOTE: The scope of this project is COMPLETE. Please do not send feature requests.**
+**NOTE: The scope of this project is COMPLETE.**
 
 # ![Hecto(graph)](https://github.com/jpscaletti/hecto/raw/master/hecto.png)
 
@@ -105,6 +105,11 @@ Uses the template in `src_path` to generate a new project at `dst_path`.
     It should return `None` if the file must be copied as-is or a Path object of the new relative destination (can be the same as the one received).
 
     By default all the files with the `.tmpl` postfix are rendered and saved without that postfix. Eg: `readme.md.tmpl` becomes `readme.md`.
+
+- **get_context** (function):<br>
+    An optional hook called before rendering a file. Takes the relative
+    destination path of the file as argument, and should return a dictionary
+    with the context for its rendering.
 
 - **pretend** (bool):<br>
     Optional. Run but do not make any changes
