@@ -1,4 +1,5 @@
-**NOTE: The scope of this project is COMPLETE.**
+> **NOTE**: I'm thankful for any bug fix or report; They are more than welcome.<br>
+> However, I want to keep the scope of this project very small, so any other kind of pull-requests are discouraged.
 
 # ![Hecto(graph)](https://github.com/jpscaletti/hecto/raw/master/hecto.png)
 
