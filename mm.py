@@ -7,7 +7,7 @@ data = {
     "title": "Hecto",
     "name": "hecto",
     "pypi_name": "hecto",
-    "version": "1.191026",
+    "version": "1.200103",
     "author": "Juan-Pablo Scaletti",
     "author_email": "juanpablo@jpscaletti.com",
     "description": "(graph).",
@@ -20,7 +20,7 @@ data = {
     "install_requires": [
         "jinja2 ~= 2.10",
         "colorama ~= 0.4",
-        "pyyaml ~= 5.1.2",
+        "pyyaml ~= 5.1",
     ],
     "testing_requires": [
         "pytest",
