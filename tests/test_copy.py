@@ -1,15 +1,9 @@
 from pathlib import Path
+import filecmp
 import re
 
 import hecto
 import pytest
-
-from .helpers import assert_file
-from .helpers import DATA
-from .helpers import filecmp
-from .helpers import make_folder
-from .helpers import PROJECT_TEMPLATE
-from .helpers import render
 
 
 def test_project_not_found(dst):
@@ -20,10 +14,14 @@ def test_project_not_found(dst):
         hecto.copy(__file__, dst)
 
 
-def test_copy(dst):
+def test_copy(dst, render, PROJECT_TEMPLATE, assert_file):
     render(dst)
     generated = (dst / "pyproject.toml").read_text()
     control = (Path(__file__).parent / "references" / "pyproject.toml").read_text()
+    assert generated == control
+
+    generated = (dst / "doc" / "foo.txt").read_text()
+    control = (PROJECT_TEMPLATE / "doc" / "foo.txt.append").read_text()
     assert generated == control
 
     assert_file(dst, "doc", "mañana.txt")
@@ -38,37 +36,45 @@ def test_copy(dst):
     assert filecmp.cmp(p1, p2)
 
 
+def test_copy_append(dst, render, PROJECT_TEMPLATE):
+    render(dst)
+    render(dst, skip=True)
+    generated = (dst / "doc" / "foo.txt").read_text()
+    control = (PROJECT_TEMPLATE / "doc" / "foo.txt.append").read_text()
+    assert generated == control * 2
+
+
 def test_copy_repo(dst):
     hecto.copy("gh:jpscaletti/siht.git", dst, quiet=True)
     assert (dst / "setup.py").exists()
 
 
-def test_default_exclude(dst):
+def test_default_exclude(dst, render):
     render(dst)
     assert not (dst / ".svn").exists()
 
 
-def test_include_file(dst):
+def test_include_file(dst, render, assert_file):
     render(dst, include=[".svn"])
     assert_file(dst, ".svn")
 
 
-def test_include_pattern(dst):
+def test_include_pattern(dst, render):
     render(dst, include=[".*"])
     assert (dst / ".svn").exists()
 
 
-def test_exclude_file(dst):
+def test_exclude_file(dst, render):
     render(dst, exclude=["mañana.txt"])
     assert not (dst / "doc" / "mañana.txt").exists()
 
 
-def test_exclude_folder(dst):
+def test_exclude_folder(dst, render):
     render(dst, exclude=["doc", "doc/*"])
     assert not (dst / "doc").exists()
 
 
-def test_skip_if_exists(dst):
+def test_skip_if_exists(dst, make_folder, PROJECT_TEMPLATE, DATA):
     (dst / "aaaa.txt").write_text("SKIPPED aaaa.txt")
     (dst / "config.py").write_text("SKIPPED config.py")
     make_folder(dst / "awesome")
@@ -90,7 +96,7 @@ def test_skip_if_exists(dst):
     assert (dst / ".gitignore").read_text() != "SKIPPED .gitignore"
 
 
-def test_skip_option(dst):
+def test_skip_option(dst, render):
     render(dst)
     path = dst / "pyproject.toml"
     content = "lorem ipsum"
@@ -99,7 +105,7 @@ def test_skip_option(dst):
     assert path.read_text() == content
 
 
-def test_force_option(dst):
+def test_force_option(dst, render):
     render(dst)
     path = dst / "pyproject.toml"
     content = "lorem ipsum"
@@ -108,23 +114,22 @@ def test_force_option(dst):
     assert path.read_text() != content
 
 
-def test_pretend_option(dst):
+def test_pretend_option(dst, render):
     render(dst, pretend=True)
     assert not (dst / "doc").exists()
     assert not (dst / "config.py").exists()
     assert not (dst / "pyproject.toml").exists()
 
 
-ROOT_PATH = Path(__file__).parent
-
-
 def test_invalid_yaml(dst, capsys):
-    hecto.copy(ROOT_PATH / "demo_invalid_defaults", dst)
+    (dst / "hecto.yaml").write_text("& [sss]: lol\n")
+    hecto.copy(dst, ".")
     out, err = capsys.readouterr()
     assert re.search(r"INVALID CONFIG FILE.*hecto\.yaml", out)
 
 
 def test_invalid_quiet(dst, capsys):
-    hecto.copy(ROOT_PATH / "demo_invalid_defaults", dst, quiet=True)
+    (dst / "hecto.yaml").write_text("& [sss]: lol\n")
+    hecto.copy(dst, ".", quiet=True)
     out, err = capsys.readouterr()
     assert out == ""

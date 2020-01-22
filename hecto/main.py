@@ -76,8 +76,9 @@ def copy(
         It should return `None` if the file must be copied as-is or a Path object
         of the new relative destination (can be the same as the one received).
 
-        By default all the files with the `.tmpl` postfix are rendered and saved
-        without that postfix. Eg: `readme.md.tmpl` becomes `readme.md`.
+        By default, all the files with the `.tmpl` or `.append` postfix are
+        will be saved to a file without that postfix.
+        Eg: `readme.md.tmpl` becomes `readme.md`.
 
     - get_context (function):
         An optional hook called before rendering a file. Takes the relative
@@ -129,11 +130,11 @@ GLOBAL_DEFAULTS = {
 }
 
 DEFAULT_DATA = {"now": datetime.datetime.utcnow}
-RE_TMPL = re.compile(r"\.tmpl$", re.IGNORECASE)
+RE_TMPL = re.compile(r"\.(tmpl|append)$", re.IGNORECASE)
 
 
 def default_render_as(src_path, dst_path):
-    if dst_path.suffix == ".tmpl":
+    if dst_path.suffix in (".tmpl", ".append"):
         return Path(re.sub(RE_TMPL, "", str(dst_path)))
 
 
@@ -286,13 +287,18 @@ def render_file(
         context = get_context(rel_path) if get_context else {}
         content = render(source_path, **context)
         rel_path = render_to
+        append = str(source_path).endswith(".append")
     else:
         content = None
+        append = False
 
     display_path = str(rel_path)
     final_path = dst_path / rel_path
+    exists = final_path.exists()
 
-    if final_path.exists():
+    if exists and append:
+        printf("extended", display_path, style=Style.OK, quiet=flags["quiet"])
+    elif exists:
         if file_is_identical(source_path, final_path, content):
             printf("identical", display_path, style=Style.IGNORE, quiet=flags["quiet"])
             return
@@ -314,6 +320,9 @@ def render_file(
 
     if content is None:
         copy_file(source_path, final_path)
+    elif append:
+        with final_path.open("a") as f:
+            f.write(content)
     else:
         final_path.write_text(content)
 

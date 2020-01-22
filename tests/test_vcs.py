@@ -1,6 +1,4 @@
 from os.path import exists, join
-
-import pytest
 import shutil
 
 from hecto import vcs

@@ -1,9 +1,7 @@
 import re
 
-from .helpers import render
 
-
-def test_output(capsys, dst):
+def test_output(capsys, dst, render):
     render(dst, quiet=False)
     out, err = capsys.readouterr()
     print(out)
@@ -12,7 +10,7 @@ def test_output(capsys, dst):
     assert re.search(r"created[^\s]*  doc/images/nslogo\.gif", out)
 
 
-def test_output_pretend(capsys, dst):
+def test_output_pretend(capsys, dst, render):
     render(dst, quiet=False, pretend=True)
     out, err = capsys.readouterr()
 
@@ -21,7 +19,7 @@ def test_output_pretend(capsys, dst):
     assert re.search(r"created[^\s]*  doc/images/nslogo\.gif", out)
 
 
-def test_output_force(capsys, dst):
+def test_output_force(capsys, dst, render):
     render(dst)
     out, err = capsys.readouterr()
     render(dst, quiet=False, force=True)
@@ -33,7 +31,7 @@ def test_output_force(capsys, dst):
     assert re.search(r"identical[^\s]*  doc/images/nslogo\.gif", out)
 
 
-def test_output_skip(capsys, dst):
+def test_output_skip(capsys, dst, render):
     render(dst)
     out, err = capsys.readouterr()
     render(dst, quiet=False, skip=True)
@@ -45,7 +43,7 @@ def test_output_skip(capsys, dst):
     assert re.search(r"identical[^\s]*  doc/images/nslogo\.gif", out)
 
 
-def test_output_quiet(capsys, dst):
+def test_output_quiet(capsys, dst, render):
     render(dst, quiet=True)
     out, err = capsys.readouterr()
     assert out == ""
