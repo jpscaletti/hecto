@@ -45,7 +45,7 @@ def test_copy_append(dst, render, PROJECT_TEMPLATE):
 
 
 def test_copy_repo(dst):
-    hecto.copy("gh:jpscaletti/siht.git", dst, quiet=True)
+    hecto.copy("gh:jpsca/hecto.git", dst, quiet=True)
     assert (dst / "setup.py").exists()
 
 

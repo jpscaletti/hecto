@@ -1,9 +1,9 @@
 > **NOTE**: I'm thankful for any bug fix or report; They are more than welcome.<br>
 > However, I want to keep the scope of this project very small, so any other kind of pull-requests are discouraged.
 
-# ![Hecto(graph)](https://github.com/jpscaletti/hecto/raw/master/hecto.png)
+# ![Hecto(graph)](https://github.com/jpsca/hecto/raw/master/hecto.png)
 
-[![Coverage Status](https://coveralls.io/repos/github/jpscaletti/hecto/badge.svg?branch=master)](https://coveralls.io/github/jpscaletti/hecto?branch=master) [![Tests](https://travis-ci.org/jpscaletti/hecto.svg?branch=master)](https://travis-ci.org/jpscaletti/hecto/)
+[![Coverage Status](https://coveralls.io/repos/github/jpsca/hecto/badge.svg?branch=master)](https://coveralls.io/github/jpsca/hecto?branch=master) [![Tests](https://travis-ci.org/jpsca/hecto.svg?branch=master)](https://travis-ci.org/jpsca/hecto/)
 
 A small and simple **library** for rendering projects templates.
 
@@ -27,9 +27,9 @@ copy('path/to/project/template', 'path/to/destination')
 # Or from a git URL.
 # You can also use "gh:" as a shortcut of "https://github.com/"
 # Or "gl:"  as a shortcut of "https://gitlab.com/"
-copy('https://github.com/jpscaletti/hecto.git', 'path/to/destination')
-copy('gh:jpscaletti/hecto.git', 'path/to/destination')
-copy('gl:jpscaletti/hecto.git', 'path/to/destination')
+copy('https://github.com/jpsca/hecto.git', 'path/to/destination')
+copy('gh:jpsca/hecto.git', 'path/to/destination')
+copy('gl:jpsca/hecto.git', 'path/to/destination')
 
 ```
 

@@ -12,14 +12,14 @@ def test_get_repo():
         get("git://git.myproject.org/MyProject") == "git://git.myproject.org/MyProject"
     )
     assert (
-        get("https://github.com/jpscaletti/hecto.git")
-        == "https://github.com/jpscaletti/hecto.git"
+        get("https://github.com/jpsca/hecto.git")
+        == "https://github.com/jpsca/hecto.git"
     )
 
-    assert get("gh:/jpscaletti/hecto.git") == "https://github.com/jpscaletti/hecto.git"
-    assert get("gh:jpscaletti/hecto.git") == "https://github.com/jpscaletti/hecto.git"
+    assert get("gh:/jpsca/hecto.git") == "https://github.com/jpsca/hecto.git"
+    assert get("gh:jpsca/hecto.git") == "https://github.com/jpsca/hecto.git"
 
-    assert get("gl:jpscaletti/hecto.git") == "https://gitlab.com/jpscaletti/hecto.git"
+    assert get("gl:jpsca/hecto.git") == "https://gitlab.com/jpsca/hecto.git"
 
     assert (
         get("git+https://git.myproject.org/MyProject")
@@ -39,7 +39,7 @@ def test_get_repo():
 
 
 def test_clone():
-    tmp = vcs.clone("https://github.com/jpscaletti/siht.git")
+    tmp = vcs.clone("https://github.com/jpsca/hecto.git")
     assert tmp
     assert exists(join(tmp, "setup.py"))
     shutil.rmtree(tmp)
