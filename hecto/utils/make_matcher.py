@@ -17,13 +17,6 @@ def _fullmatch(path, pattern):
     return fnmatch(name, pattern) or fnmatch(path, pattern)
 
 
-def _match(path, patterns):
-    return reduce(
-        lambda r, pattern: r or _fullmatch(path, pattern),
-        patterns,
-        False)
-
-
 def make_matcher(patterns):
     """Returns a function that evaluates if a file or folder name must be
     filtered out, and another that evaluates if a file must be skipped.
@@ -36,7 +29,10 @@ def make_matcher(patterns):
     patterns = [_normalize_str(pattern) for pattern in patterns]
 
     def path_match(path):
-        return _match(path, patterns)
+        for pattern in patterns:
+            if _fullmatch(path, pattern):
+                return True
+        return False
 
     return path_match
 
