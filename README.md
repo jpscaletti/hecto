@@ -27,9 +27,9 @@ copy('path/to/project/template', 'path/to/destination')
 # Or from a git URL.
 # You can also use "gh:" as a shortcut of "https://github.com/"
 # Or "gl:"  as a shortcut of "https://gitlab.com/"
-copy('https://github.com/jpsca/hecto.git', 'path/to/destination')
-copy('gh:jpsca/hecto.git', 'path/to/destination')
-copy('gl:jpsca/hecto.git', 'path/to/destination')
+copy('https://github.com/jpsca/base36.git', 'path/to/destination')
+copy('gh:jpsca/base36.git', 'path/to/destination')
+copy('gl:jpsca/base36.git', 'path/to/destination')
 
 ```
 

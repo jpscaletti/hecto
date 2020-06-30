@@ -45,8 +45,8 @@ def test_copy_append(dst, render, PROJECT_TEMPLATE):
 
 
 def test_copy_repo(dst):
-    hecto.copy("gh:jpsca/hecto.git", dst, quiet=True)
-    assert (dst / "setup.py").exists()
+    hecto.copy("gh:jpsca/base36.git", dst, quiet=True)
+    assert (dst / "README.md").exists()
 
 
 def test_default_exclude(dst, render):
