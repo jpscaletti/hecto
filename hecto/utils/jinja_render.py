@@ -10,7 +10,7 @@ ENVOPS_DEFAULT = {"autoescape": False, "keep_trailing_newline": True}
 
 
 class JinjaRender(object):
-    def __init__(self, src_path, data=None, envops=None):
+    def __init__(self, src_path, data=None, filters_=None, envops=None):
         # Jinja <= 2.10 does not work with `pathlib.Path`s
         self.src_path = str(src_path)
 
@@ -20,6 +20,8 @@ class JinjaRender(object):
         self.env = SandboxedEnvironment(**_envops)
         if data:
             self.env.globals.update(**data)
+        if filters_:
+            self.env.filters.update(filters_)
 
     def __call__(self, fullpath, **data):
         relpath = str(fullpath).replace(self.src_path, "", 1).lstrip(os.path.sep)
