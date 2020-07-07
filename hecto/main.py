@@ -30,6 +30,7 @@ def copy(
     include=None,
     skip_if_exists=None,
     envops=None,
+    jinja_filters=None,
     render_as=None,
     get_context=None,
     pretend=False,
@@ -68,6 +69,9 @@ def copy(
 
     - envops (dict):
         Extra options for the Jinja template environment.
+
+    - jinja_filters (dict):
+        Custom Jinja filters.
 
     - render_as (function):
         An optional hook that takes the absolute source path and the relative
@@ -111,6 +115,7 @@ def copy(
             include=include,
             skip_if_exists=skip_if_exists,
             envops=envops,
+            jinja_filters=jinja_filters,
             render_as=render_as,
             get_context=get_context,
             pretend=pretend,
@@ -158,6 +163,7 @@ def copy_local(
     include=None,
     skip_if_exists=None,
     envops=None,
+    jinja_filters=None,
     render_as=None,
     get_context=None,
     **flags,
@@ -184,7 +190,7 @@ def copy_local(
     _data = DEFAULT_DATA.copy()
     _data.update(data or {})
     _data.setdefault("folder_name", dst_path.name)
-    render = JinjaRender(src_path, _data, envops)
+    render = JinjaRender(src_path, _data, filters=jinja_filters, envops=envops)
 
     exclude_patterns = [render.string(pattern) for pattern in config["exclude"]]
     include_patterns = [render.string(pattern) for pattern in config["include"]]

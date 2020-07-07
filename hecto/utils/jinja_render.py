@@ -10,7 +10,7 @@ ENVOPS_DEFAULT = {"autoescape": False, "keep_trailing_newline": True}
 
 
 class JinjaRender(object):
-    def __init__(self, src_path, data=None, envops=None):
+    def __init__(self, src_path, data=None, filters=None, envops=None):
         # Jinja <= 2.10 does not work with `pathlib.Path`s
         self.src_path = str(src_path)
 
@@ -18,6 +18,8 @@ class JinjaRender(object):
         _envops.update(envops or {})
         _envops.setdefault("loader", jinja2.FileSystemLoader(self.src_path))
         self.env = SandboxedEnvironment(**_envops)
+        if filters:
+            self.env.filters.update(**data)
         if data:
             self.env.globals.update(**data)
 
